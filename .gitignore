@@ -172,3 +172,13 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# ignore DS_Store
+.DS_Store
+
+# 
+project/orchestration/output
+project/infrastructure/Arc
+project/docker/mlflow-prefect/mlflow
+project/deploy/model/artifacts

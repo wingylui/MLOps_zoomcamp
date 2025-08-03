@@ -1,0 +1,123 @@
+services:
+  # ------------------------- mlflow ----------------------------
+  mlflow_postgres:
+    container_name: mlflow_postgres
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: mlflow_backend
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mlflow
+    ports:
+      - '5433:5432'
+    volumes:
+      - mlflow_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow_backend -d mlflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mlflow:
+    container_name: mlflow
+    build:
+      context: mlflow_server
+      dockerfile: ./Dockerfile
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://mlflow_backend:password@mlflow_postgres:5432/mlflow
+      MLFLOW_ARTIFACT_ROOT: /mlflow
+    volumes:
+      - ./mlflow:/mlflow
+    ports:
+      - "8080:5000"
+    depends_on:
+      - mlflow_postgres
+    command: >
+      mlflow server 
+      --backend-store-uri postgresql+psycopg2://mlflow_backend:password@mlflow_postgres:5432/mlflow
+      --host 0.0.0.0 
+      --port 5000
+  # ------------------------- mlflow ----------------------------
+      # --default-artifact-root /mlflow
+# ------------- for prefect server ----------
+  postgres_prefect:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: prefect
+      POSTGRES_PASSWORD: prefect
+      POSTGRES_DB: prefect
+    volumes:
+      - postgres_prefect_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prefect"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  prefect-server:
+    image: prefecthq/prefect:3-latest
+    depends_on:
+      postgres_prefect:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://prefect:prefect@postgres_prefect:5432/prefect
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+      PREFECT_MESSAGING_BROKER: prefect_redis.messaging
+      PREFECT_MESSAGING_CACHE: prefect_redis.messaging
+      PREFECT_REDIS_MESSAGING_HOST: redis
+      PREFECT_REDIS_MESSAGING_PORT: 6379
+      PREFECT_REDIS_MESSAGING_DB: 0
+    command: prefect server start --no-services
+    ports:
+      - "4200:4200"
+
+  prefect-services:
+    image: prefecthq/prefect:3-latest
+    depends_on:
+      postgres_prefect:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://prefect:prefect@postgres_prefect:5432/prefect
+      PREFECT_MESSAGING_BROKER: prefect_redis.messaging
+      PREFECT_MESSAGING_CACHE: prefect_redis.messaging
+      PREFECT_REDIS_MESSAGING_HOST: redis
+      PREFECT_REDIS_MESSAGING_PORT: 6379
+      PREFECT_REDIS_MESSAGING_DB: 0
+    command: prefect server services start
+
+  prefect-worker:
+    image: prefecthq/prefect:3-latest
+    depends_on:
+      prefect-server:
+        condition: service_started
+    environment:
+      PREFECT_API_URL: http://prefect-server:4200/api
+    command: prefect worker start --pool local-pool
+# ------------- for prefect server ----------
+
+volumes:
+  mlflow_postgres_data:
+    name: mlflow_postgres_data
+  redis_data:
+    name: redis_data
+  prefect_data:
+    name: prefect_data
+  postgres_prefect_data:
+    name: postgres_prefect_data
+
+
+
