@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+scikit-learn = "==1.7.1"
+xgboost = "==2.1.2"
+flask = "*"
+gunicorn = "*"
+
+[dev-packages]
+requests = "*"
+
+[requires]
+python_version = "3.13"
+python_full_version = "3.13.5"

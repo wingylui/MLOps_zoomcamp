@@ -1,0 +1,54 @@
+
+services:
+  price-predictor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9696:9696"
+    volumes:
+      - ./flask_app:/app/flask_app
+      - ./model:/app/model
+    restart: always
+
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: monitor
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5431:5432"
+    networks:
+      - back-tier
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8050:8050"
+    networks:
+      - back-tier
+      - front-tier  
+
+  grafana:
+    image: grafana/grafana-enterprise
+    user: "472"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config/grafana_datasources.yaml:/etc/grafana/provisioning/datasources/datasource.yaml:ro
+      - ./config/grafana_dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+      - ./dashboards:/opt/grafana/dashboards
+    networks:
+      - back-tier
+      - front-tier
+    restart: always
+
+networks:
+  front-tier:
+  back-tier:
+
+
+volumes: 
+  grafana_data: {}
