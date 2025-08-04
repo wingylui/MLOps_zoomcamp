@@ -9,6 +9,10 @@ This repository contains an end-to-end MLOps project that predicts housing price
 The goal is to predict property prices in Perth using a mix of geographic, demographic, and real estate features. The model serves real-time predictions via an API and is continuously monitored and retrained as data drift or performance degradation is detected.
 
 ---
+### Overview Flowchart
+![overview](./img/MLOps_project_structure.png)
+
+---
 
 ### 📦 Dataset & Feature Engineering
 
